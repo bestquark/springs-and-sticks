@@ -140,8 +140,6 @@ class GGS3DE(nn.Module):
         self.LM = LagrangesMethod(self.lagrangian, self.x_symbols.flatten())
         self.LM.form_lagranges_equations()
    
-        # self.elm = solve(self.LM.form_lagranges_equations(), self.ddx_symbols.flatten())
-
         self.mass_matrix = self.LM.mass_matrix
         self.forcing_vector = self.LM.forcing
         try:
@@ -151,7 +149,7 @@ class GGS3DE(nn.Module):
             self.evol_dynamics = self.mass_matrix.pinv() * self.forcing_vector
     
         self.lambdified_dyn = lambdify(
-            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], self.evol_dynamics
+            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1,1) / self.N
         )
 
         self.ypred = lambda u: lambdify(
