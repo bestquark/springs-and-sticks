@@ -157,6 +157,11 @@ class GGS3DE(nn.Module):
         self.ypred = lambda u: lambdify(
             [*self.x_symbols.flatten()], self.y_prediction(u)
         )
+
+        self.ue = lambdify(
+            [*self.x_symbols.flatten()], self.U
+        )
+
         print("Done initializing.")
 
     def lamd(self, i, u, flip_ind=None, div_by_ell=True):
@@ -212,7 +217,12 @@ class GGS3DE(nn.Module):
         q = y[:, : self.N].T
         dq = y[:, self.N :].T
 
-        ddqdt = torch.tensor(self.lambdified_dyn(*q, *dq)).squeeze()
+
+        ddqdt = torch.tensor(self.lambdified_dyn(*q, *dq))
+        ddqdt_shape = ddqdt.shape
+        ddqdt = ddqdt.squeeze()
+        if ddqdt_shape[-1] == 1:
+            ddqdt = ddqdt.unsqueeze(-1)
 
         step = torch.vstack([dq, ddqdt])
 
@@ -224,9 +234,3 @@ class GGS3DE(nn.Module):
     def cost(self, y):
         q = y[:, : self.N].T
         return self.ue(*q)
-
-    def kinetic_energy(self, y):
-        q = y[:, : self.N].T
-        dq = y[:, self.N :].T
-
-        return self.ke(*q, *dq)

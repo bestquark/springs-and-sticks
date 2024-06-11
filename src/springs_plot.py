@@ -129,7 +129,7 @@ def generalized_animation(ts, ys, u_i, y_i, path="anis/ganimation.gif", frame_sk
 
     # Setting up the figure
     fig, ax = plt.subplots(figsize=(12, 6))
-    scatter = ax.scatter(u_i, y_i, label="Data points", marker="x", c="black")
+    scatter = ax.scatter(u_i, y_i, label="Data points", marker="o", c="blue", s=10, zorder=10)
     linspace = np.linspace(min(u_i), max(u_i), linspace_points)
     n_points_seg = linspace_points // (n_vars - 1)
     seg_length = (max(u_i) - min(u_i)) / (n_vars - 1)
@@ -209,6 +209,95 @@ def generalized_animation(ts, ys, u_i, y_i, path="anis/ganimation.gif", frame_sk
     ani.save(path, writer=writer)
 
     return path
+
+
+def generalized_single_frame(ts, ys, u_i, y_i, time_index=0, path="figs/single_frame_generalized.pdf", ax=None):
+    """Saves a single frame of the system based on the solution array at a specified time index."""
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "sans-serif",
+        "font.sans-serif": "Helvetica",
+    })
+    plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+
+    solution = np.array(ys)
+
+    n_vars = int(solution.shape[1] // 2)
+    linspace_points = 1000 if n_vars <= 100 else 10000
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    linspace = np.linspace(min(u_i), max(u_i), linspace_points)
+    n_points_seg = linspace_points // (n_vars - 1)
+    seg_length = (max(u_i) - min(u_i)) / (n_vars - 1)
+
+    y_vals = [solution[time_index, i] for i in range(n_vars)]
+    global_y_max = max(max(y_vals), max(y_i)) * 1.1
+    global_y_min = min(min(y_vals), min(y_i)) * 1.1
+
+    ax.set_ylim(global_y_min, global_y_max)
+
+    N = len(u_i)  # Number of springs
+    umin = min(u_i)
+
+    # Compute positions and plot
+    sticks = []
+    endpoints = []
+    x_endpoints = []
+    for i in range(n_vars - 1):
+        st_start = solution[time_index, i]
+        st_end = solution[time_index, i + 1]
+        x_seg = linspace[n_points_seg * i : n_points_seg * (i + 1)]
+        slope = (st_end - st_start) / seg_length
+        dif = x_seg - umin - i * seg_length
+        stick = st_start + slope * dif
+        sticks.append(stick)
+        endpoints.append(st_start)
+        x_endpoints.append(umin + i * seg_length)
+        if i == n_vars - 2:
+            endpoints.append(st_end)
+            x_endpoints.append(umin + (i + 1) * seg_length)
+
+    
+    for i in range(len(u_i)):
+        interval = int((u_i[i] - umin) // seg_length)
+        if interval == n_vars - 1:
+            interval -= 1
+
+        init_i = solution[time_index, interval]
+        final_i = solution[time_index, interval + 1]
+
+        slope = (final_i - init_i) / seg_length
+        dif = u_i[i] - umin - interval * seg_length
+        y_val = init_i + slope * dif
+
+        x_spring, y_spring = spring(
+            [u_i[i], y_i[i]], [u_i[i], y_val], nodes=10, width=0.1
+        )
+        ax.plot(x_spring, y_spring, c="gray")
+
+    sticks = np.array(sticks).flatten()
+    ax.plot(linspace, np.array(sticks), label="Solution", c="black", linewidth=1.5)
+    # add x markers in the endpoints of the sticks
+    ax.scatter(x_endpoints, endpoints, c="black", marker="x", s=5)
+    ax.scatter(u_i, y_i, label="Data points", marker="o", c="b", s=10, zorder=10)
+    ax.set_xlabel(r"$x$", fontsize=16)
+    ax.set_ylabel(r"$f(x)$", fontsize=16)
+    
+    #ticks
+    ax.tick_params(axis='both', which='major', labelsize=16)
+    
+
+    # current_time = ts[time_index]
+    # ax.text(0.02, 0.95, f"Time: {current_time:.2f}", transform=ax.transAxes, fontsize=14, color="black")
+
+    plt.savefig(path, bbox_inches="tight")
+
+    return fig, ax
+
 
 def spring_3d(start, end, nodes, width):
     """Generate points for a spring in 3D."""

@@ -139,6 +139,7 @@ class GS3DE(nn.Module):
         self.temp = temp
         self.eta_cte = float(np.sqrt(2 * friction * temp * kb / M))
 
+        self.n_pieces = n_pieces
         self.N = n_pieces + 1
         self.x_symbols = [dynamicsymbols(f"x{i}") for i in range(self.N)]
         self.dx_symbols = [dynamicsymbols(f"x{i}", 1) for i in range(self.N)]
@@ -248,7 +249,7 @@ class GGS3DE(nn.Module):
         self.sde_type = "ito"
 
         if isinstance(n_pieces, int):
-            n_pieces = np.ones(u_i.shape[0]) * n_pieces
+            n_pieces = np.ones(u_i.shape[0], dtype=int) * n_pieces
 
         assert (
             n_pieces.shape[0] == u_i.shape[0]
@@ -279,6 +280,7 @@ class GGS3DE(nn.Module):
         self.N = np.prod(x_symbols.shape)
 
         # Iterate over all indices and assign symbols
+        print("Creating symbols...")
         for index in np.ndindex(x_symbols.shape):
             # Create symbol and assign it to the corresponding index in the array
             x_symbols[index] = dynamicsymbols(f"x_{''.join(map(str, index))}")
@@ -292,6 +294,7 @@ class GGS3DE(nn.Module):
             self.ddx_symbols[index] = self.dx_symbols[index].diff()
 
         # Kinetic energy (translational)
+        print("Calculating kinetic energy...")
         ktr = 0
         for i in range(len(x_symbols.shape) - 1):
             # Create slices to shift the view one position along the i-th dimension
@@ -333,8 +336,8 @@ class GGS3DE(nn.Module):
 
         self.krot = krot
 
+        print("Calculating potential energy...")
         # Elastic energy (we don't want xi - xi+1 to be so far from ell)
-
         uelastic = 0
 
         if k2 != 0:
@@ -403,6 +406,7 @@ class GGS3DE(nn.Module):
                 )
         self.U = U
 
+        print("Calculating Lagrangian...")
         # Lagrangian
         self.lagrangian = ktr + krot - U - uelastic
         self.LM = LagrangesMethod(self.lagrangian, self.x_symbols.flatten())
@@ -424,6 +428,7 @@ class GGS3DE(nn.Module):
         self.ypred = lambda u: lambdify(
             [*self.x_symbols.flatten()], self.y_prediction(u)
         )
+        print("Done initializing.")
 
     def lamd(self, i, u, flip_ind=None, div_by_ell=True):
         """Returns the lambda function for the i-th dimension."""
