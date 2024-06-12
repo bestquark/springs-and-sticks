@@ -5,10 +5,12 @@ from sklearn.decomposition import PCA
 
 from src.speed_springs import GGS3DE
 
-FRICTION = 10
+FRICTION = 50
 TEMP = 1
 K = 1
 M = 1
+
+PCA_COMPONENTS = 4
 
 MAX_TIME=20
 T_SIZE=100
@@ -47,7 +49,7 @@ def mnist():
     u_i_test_normalized = u_i_test_centered / (u_i_train.std(axis=0) + 1e-10)
 
     # Get 4 PCA components of u_i_train
-    pca = PCA(n_components=4)
+    pca = PCA(n_components=PCA_COMPONENTS)
     u_i_train_pca = torch.tensor(pca.fit_transform(u_i_train_normalized))
     u_i_test_pca = torch.tensor(pca.transform(u_i_test_normalized))
 
@@ -73,35 +75,38 @@ def mnist():
     with torch.no_grad():
         ys_gen = torchsde.sdeint(sde_train, y0, ts, method="euler")
 
+    idx = f"{FRICTION}_{TEMP}_{K}_{M}_{PCA_COMPONENTS}_{MAX_TIME}_{T_SIZE}"
 
     # Save the output
-    torch.save(ys_gen, "ys_gen.pt")
+    torch.save(ys_gen, f"ys_gen_{idx}.pt")
 
     # Calculate the cost
     train_cost = sde_train.cost(ys_gen[:, 0, :]).detach().numpy()/len(u_i_train)
     test_cost = sde_test.cost(ys_gen[:, 0, :]).detach().numpy()/len(u_i_test)
 
     # Save the cost
-    torch.save(train_cost, "train_cost.pt")
-    torch.save(test_cost, "test_cost.pt")
+    torch.save(train_cost, f"train_cost_{idx}.pt")
+    torch.save(test_cost, f"test_cost_{idx}.pt")
 
-def plot():
-    ys_gen = torch.load("ys_gen.pt")
-    train_cost = torch.load("train_cost.pt")
-    test_cost = torch.load("test_cost.pt")
+    return idx
+
+def plot(idx):
+    ys_gen = torch.load(f"ys_gen_{idx}.pt")
+    train_cost = torch.load(f"train_cost_{idx}.pt")
+    test_cost = torch.load(f"test_cost_{idx}.pt")
+
+    friction, temp, k, m, pca_components, max_time, t_size = idx.split("_")
 
     import matplotlib.pyplot as plt
 
-    plt.plot(ys_gen[:, 0, :].detach().numpy())
-    plt.title("Generated Data")
-    plt.show()
-
-    plt.plot(train_cost, label="Train Cost")
-    plt.plot(test_cost, label="Test Cost")
-    plt.legend()
-    plt.title("Cost")
-    plt.show()
+    plt.title(f"Friction: {friction}, Temp: {temp}, K: {k}, M: {m}", fontsize=20)
+    plt.plot(train_cost, label="Train Cost", color='blue')
+    plt.plot(test_cost, label="Test Cost", color='red')
+    plt.xlabel("Time", fontsize=20)
+    plt.ylabel("Cost", fontsize=20)
+    plt.legend(fontsize=20)
+    plt.savefig(f"figs/cost_{idx}.pdf")
 
 if __name__ == "__main__":
-    mnist()
-    plot()
+    idx = mnist()
+    plot(idx)
