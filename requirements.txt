@@ -3,3 +3,5 @@ numpy==1.26.4
 sympy==1.12
 torch==2.2.2
 torchsde==0.2.6
+torchvision==0.17.2
+scikit-learn==1.5.0

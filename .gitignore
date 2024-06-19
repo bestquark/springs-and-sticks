@@ -1,5 +1,6 @@
 data/
 run_job.sh
+log_springs.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -10,6 +10,8 @@ TEMP = 1
 K = 1
 M = 1
 
+BATCH_SIZE = 20
+
 PCA_COMPONENTS = 4
 
 MAX_TIME=20
@@ -55,12 +57,12 @@ def mnist():
 
 
     n_pieces_train = torch.ones_like(u_i_train_pca[0], dtype=int)
-    n_pieces_test = torch.ones_like(u_i_test_pca[0], dtype=int)
-
-    batch_size = 1
+    n_pieces_test = torch.ones_like(u_i_test_pca[0], dtype=int)    
 
     state_size_train = torch.prod(n_pieces_train + 1) * 2 * y_i_train.shape[0]
     state_size_test = torch.prod(n_pieces_test + 1) * 2 * y_i_test.shape[0]
+
+    print("Creating train and test models...")
 
     sde_train = GGS3DE(
         n_pieces_train, u_i_train_pca.T, y_i_train.T, friction=FRICTION, temp=TEMP, k=K, M=M
@@ -69,13 +71,27 @@ def mnist():
         n_pieces_test, u_i_test_pca.T, y_i_test.T, friction=FRICTION, temp=TEMP, k=K, M=M
     )
 
+    print("Saving models...")
+
+    idx = f"{FRICTION}_{TEMP}_{K}_{M}_{PCA_COMPONENTS}_{MAX_TIME}_{T_SIZE}"
+
+    # Save the models with pickle
+    import pickle
+
+    with open(f"runs/sde_train_{idx}.pkl", "wb") as f:
+        pickle.dump(sde_train, f)
+
+    with open(f"runs/sde_test_{idx}.pkl", "wb") as f:
+        pickle.dump(sde_test, f)
+
+    print("Time evolving the models...")
+
     ts = torch.linspace(0, MAX_TIME, T_SIZE)
-    y0 = torch.rand(size=(batch_size, state_size_train))
+    y0 = torch.rand(size=(BATCH_SIZE, state_size_train))
 
     with torch.no_grad():
         ys_gen = torchsde.sdeint(sde_train, y0, ts, method="euler")
 
-    idx = f"{FRICTION}_{TEMP}_{K}_{M}_{PCA_COMPONENTS}_{MAX_TIME}_{T_SIZE}"
 
     # Save the output
     torch.save(ys_gen, f"ys_gen_{idx}.pt")
