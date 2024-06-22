@@ -11,23 +11,30 @@ def get_xxt_avg(ys):
     return xxt_avg
 
 def get_x_avg(ys):
-    return torch.mean(ys, dim=1)
+    return torch.mean(ys, dim=1).to(torch.float64)
 
 def get_theta(ys):
     xxt_avg = get_xxt_avg(ys)
     x_avg_e = get_x_avg(ys)[:, :, None]
     x_avg_t = x_avg_e.transpose(1, 2)
-    return xxt_avg - torch.matmul(x_avg_e, x_avg_t)
+    return (xxt_avg - torch.matmul(x_avg_e, x_avg_t)).to(torch.float64)
 
 def get_Dtensor(diag):
     # turn diag float to tensor
     diag = torch.tensor(diag)
     diag_tensor = torch.diag(diag)
     Dtensor = diag_tensor @ diag_tensor.T / 2
-    return Dtensor
+    return Dtensor.to(torch.float64)
 
 def get_Ab(sde):
+    # Breaks dynamics into Ax + b
     minvf = sde.LM.mass_matrix_full.pinv() @ sde.LM.forcing_full
+
+    # add friction term
+    fric_term = - sde.friction * sde.dx_symbols.reshape(-1,1) / sde.N 
+    fric_term = np.vstack((np.zeros((sde.x_symbols.shape[0], 1)), fric_term))
+    minvf += fric_term
+
     vecs = sp.Matrix(np.vstack((sde.x_symbols.reshape(-1,1), sde.dx_symbols.reshape(-1,1))))
 
     n = vecs.shape[0]
@@ -40,6 +47,7 @@ def get_Ab(sde):
             A[i, j] = -minvf[i].coeff(vecs[j])
         b[i] = minvf[i].subs({vi: 0 for vi in vecs})
     return A, b
+
 
 def get_Abqp(sde):
     A, b = get_Ab(sde)
@@ -63,13 +71,42 @@ def getPit(ys, sde):
     theta = get_theta(ys)
     diag = sde.eta_cte * torch.ones(ys.shape[2])
     Dtensor = get_Dtensor(diag)
-    # Aq = get_Aq(sde)
-    return torch.vmap(torch.trace)(Dtensor @ theta.inverse())
+    Aq, bq, _, _ = get_Abqp(sde)
+    x_avg = get_x_avg(ys)
+    
+    Aq = torch.tensor(Aq)
+    bq = torch.tensor(bq).squeeze()
 
-def get_dsdt(ys, sde):
-    theta = get_theta(ys)
+    vec = torch.vmap(lambda x: Aq @ x - bq)(x_avg)
+
+    t1 = torch.vmap(torch.trace)(Dtensor @ theta.inverse() - Aq)
+    t2 = torch.vmap(torch.trace)(Aq.T @ Dtensor.inverse() @ Aq @ theta - Aq)
+    t3 = torch.vmap(lambda x: x.T @ Dtensor.inverse() @ x)(vec)
+
+
+    print(t1.shape, t2.shape, t3.shape)
+
+    return t1 + t2 + t3
+    
+def getPhit(ys, sde):
+    theta = get_theta(ys).to(torch.float64)
     diag = sde.eta_cte * torch.ones(ys.shape[2])
-    Dtensor = get_Dtensor(diag)
-    A, b = get_Ab(sde)
+    Dtensor = get_Dtensor(diag).to(torch.float64)
+    _, _, Aq, bq = get_Abqp(sde)
+    x_avg = get_x_avg(ys).to(torch.float64)
 
-    return torch.vmap(torch.trace)(theta.inverse() @ Dtensor - A)
+    Aq = torch.tensor(Aq)
+    bq = torch.tensor(bq).squeeze()
+
+    vec = torch.vmap(lambda x: Aq @ x - bq)(x_avg)
+
+    t1 = torch.vmap(torch.trace)(Aq.T @ Dtensor.inverse() @ Aq @ theta - Aq)
+    t2 = torch.vmap(lambda x: x.T @ Dtensor.inverse() @ x)(vec)
+
+    return t1 + t2
+
+def get_entropy_rates(ys, sde):
+    "Returns Pi(t), Phi(t), and dS/dt = Pi(t) - Phi(t)"
+    pit = getPit(ys, sde)
+    phit = getPhit(ys, sde)
+    return pit, phit, pit - phit
