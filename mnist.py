@@ -11,6 +11,8 @@ K = 1
 M = 1
 
 BATCH_SIZE = 20
+TRAIN_SIZE_PERC = 0.5
+TEST_SIZE_PERC = 0.5
 
 PCA_COMPONENTS = 4
 
@@ -41,6 +43,16 @@ def mnist():
 
     y_i_train = torch.nn.functional.one_hot(y_train, num_classes=10)
     y_i_test = torch.nn.functional.one_hot(y_test, num_classes=10)
+
+    # get percentage of data
+    train_size = int(len(u_i_train) * TRAIN_SIZE_PERC)
+    test_size = int(len(u_i_test) * TEST_SIZE_PERC)
+
+    u_i_train = u_i_train[:train_size]
+    y_i_train = y_i_train[:train_size]
+
+    u_i_test = u_i_test[:test_size]
+    y_i_test = y_i_test[:test_size]
 
     print("Preprocessing data...")
 
@@ -73,7 +85,7 @@ def mnist():
 
     print("Saving models...")
 
-    idx = f"{FRICTION}_{TEMP}_{K}_{M}_{PCA_COMPONENTS}_{MAX_TIME}_{T_SIZE}"
+    idx = f"{FRICTION}_{TEMP}_{K}_{M}_{PCA_COMPONENTS}_{MAX_TIME}_{T_SIZE}_{train_size}_{test_size}"
 
     # Save the models with pickle
     import pickle
@@ -111,7 +123,7 @@ def plot(idx):
     train_cost = torch.load(f"train_cost_{idx}.pt")
     test_cost = torch.load(f"test_cost_{idx}.pt")
 
-    friction, temp, k, m, pca_components, max_time, t_size = idx.split("_")
+    friction, temp, k, m, pca_components, max_time, t_size, train_size, test_size = idx.split("_")
 
     import matplotlib.pyplot as plt
 
