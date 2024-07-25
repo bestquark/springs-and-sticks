@@ -146,7 +146,7 @@ class GGS3DE(nn.Module):
             self.evol_dynamics = self.mass_matrix.pinv() * self.forcing_vector
 
         self.lambdified_dyn = lambdify(
-            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], 0 #self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1,1) / self.N 
+            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1,1) / self.N 
         )
 
         self.ypred = lambda u: lambdify(
