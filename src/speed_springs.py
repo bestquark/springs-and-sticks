@@ -83,7 +83,7 @@ class GGS3DE(nn.Module):
             difference = difference.ravel()
             ktr = Add(ktr, (self.M.item() / 8) * Add(*difference))
 
-        self.ktr = ktr
+        self.ktr = simplify(ktr)
 
         # Kinetic energy (rotational)
         krot = 0
@@ -98,7 +98,7 @@ class GGS3DE(nn.Module):
             difference = difference.ravel()
             krot = Add(krot, (self.M.item()/ 24) * Add(*difference))
 
-        self.krot = krot
+        self.krot = simplify(krot)
 
     def _init_potential_energy(self):
         print("Calculating potential energy...")
@@ -116,7 +116,7 @@ class GGS3DE(nn.Module):
                 difference = difference.ravel()
                 uelastic = Add(uelastic, self.k2 / 2 * Add(*difference))
 
-        self.uelastic_symbols = uelastic
+        self.uelastic_symbols = simplify(uelastic)
 
         # Potential energy (cost function)
         U = 0
@@ -128,12 +128,12 @@ class GGS3DE(nn.Module):
             difference = difference.ravel()
             U = Add(U, (self.k/ 2 * Add(*difference)))
         
-        self.U = U
+        self.U = simplify(U)
 
     def _init_lagrangian(self):
         print("Calculating Lagrangian...")
         # Lagrangian
-        self.lagrangian = Add(self.ktr, self.krot, -self.U, -self.uelastic_symbols)
+        self.lagrangian = simplify(Add(self.ktr, self.krot, -self.U, -self.uelastic_symbols))
         self.LM = LagrangesMethod(self.lagrangian, self.x_symbols.flatten())
         self.LM.form_lagranges_equations()
    
@@ -146,7 +146,7 @@ class GGS3DE(nn.Module):
             self.evol_dynamics = self.mass_matrix.pinv() * self.forcing_vector
 
         self.lambdified_dyn = lambdify(
-            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1,1) / self.N 
+            [*self.x_symbols.flatten(), *self.dx_symbols.flatten()], 0 #self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1,1) / self.N 
         )
 
         self.ypred = lambda u: lambdify(
