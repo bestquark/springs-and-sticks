@@ -9,6 +9,81 @@ import torch.nn as nn
 
 from itertools import product
 
+class GroupGGS3DE(nn.Module):
+    """Grouped GGS3DE models. It breaks the learning into M groups of GG3DE models and outputs the average of the predictions."""
+    def __init__(
+        self, max_features, n_pieces, u_i, y_i, friction=0, temp=0, k=1, M=1, kb=1.38064852e-23, k2=0, group_strategy="sequential"
+    ):
+        """
+        max_features (int or float): If int, it should be greater than 1. If float, it should be between 0 and 1 and will represent the fraction of the total features that will be used in each group.
+
+        group_strategy (str): Strategy to group the features. Can be "sequential" or "random".
+        """
+        assert group_strategy in ["sequential", "random"], "group_strategy must be 'sequential' or 'random'"
+
+        match max_features:
+            case int():
+                assert max_features >= 1, "max_features must be greater than or equal to 1"
+            case float():
+                assert 0 < max_features < 1, "max_features must be between 0 and 1"
+            case _:
+                raise ValueError("max_features must be an int or a float")
+
+        super().__init__()
+        self.noise_type = "diagonal"
+        self.sde_type = "ito"
+
+        self.num_features = u_i.shape[0]
+        self.num_labels = y_i.shape[0]
+
+        self.max_features = max_features if isinstance(max_features, int) else int(max_features * self.num_features)
+        self.group_strategy = group_strategy
+
+        self.groups, self.groups_idx = self.split_features(u_i, strategy=group_strategy)
+
+        variables = n_pieces + torch.ones_like(n_pieces)
+        state_sizes = torch.tensor([torch.prod(variables[idx]) for idx in sde.groups_idx]) * 2 * y_i.shape[0]
+        self.cstate_sizes = torch.cat((torch.tensor([0]), state_sizes.cumsum(dim=0)))  # Precompute cumulative sums
+
+        self.models = nn.ModuleList(
+            [GGS3DE(n_pieces[self.groups_idx[id]], group, y_i, friction, temp, k, M, kb, k2) for id, group in enumerate(self.groups)]
+        )
+
+    def split_features(self, u_i, strategy="sequential"):
+        num_samples = u_i.shape[0]
+        indices = torch.arange(num_samples)
+
+        if strategy == "sequential":
+            split_tensors = torch.split(u_i, self.max_features, dim=0)
+            split_indices = torch.split(indices, self.max_features, dim=0)
+        elif strategy == "random":
+            permuted_indices = torch.randperm(num_samples)
+            split_tensors = torch.split(u_i[permuted_indices], self.max_features, dim=0)
+            split_indices = torch.split(permuted_indices, self.max_features, dim=0)
+        else:
+            raise ValueError("strategy must be 'sequential' or 'random'")
+
+        return split_tensors, split_indices
+        
+
+    def f(self, t, y):
+        return torch.cat([model.f(t, self.get_y_group(y, i)) for i, model in enumerate(self.models)], dim=1)
+
+    def g(self, t, y):
+        return torch.cat([model.g(t, self.get_y_group(y, i)) for i, model in enumerate(self.models)], dim=1)
+    
+    def cost(self, y):
+        return torch.sum(torch.stack([model.cost(self.get_y_group(y, i)) for i, model in enumerate(self.models)]), dim=0)
+    
+    def y_prediction(self, u):
+        return torch.mean(torch.stack([model.y_prediction(u) for model in self.models]), dim=0)
+    
+    def num_y_prediction(self, u, y):
+        return torch.mean(torch.stack([model.num_y_prediction(u, y) for model in self.models]), dim=0)
+
+    def get_y_group(self, y, group):
+        return y[:, self.cstate_sizes[group]:self.cstate_sizes[group + 1]]
+    
 
 class GGS3DE(nn.Module):
     def __init__(
