@@ -1,4 +1,6 @@
 data/
+anis/
+figs/
 run_job.sh
 log_springs.txt
 
