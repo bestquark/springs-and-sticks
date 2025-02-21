@@ -30,7 +30,7 @@ def spring(start, end, nodes, width):
     return spring_coords[0, :], spring_coords[1, :]
 
 
-def animate_springs(ts, ys, u_i, y_i, path="anis/animation.gif", frame_skip=1):
+def animate_springs(ts, thetas, u_i, y_i, path="anis/animation.gif", frame_skip=1):
     """Animates the spring movement based on the solution array.
 
     Args:
@@ -48,7 +48,7 @@ def animate_springs(ts, ys, u_i, y_i, path="anis/animation.gif", frame_skip=1):
     # frame_skip = max(1, time_steps // 200)  # Adjust frame skip to manage animation length
 
     ell = max(u_i) - min(u_i)
-    solution = np.array(ys)
+    solution = np.array(thetas)
 
     # Setting up the figure
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -116,13 +116,13 @@ def animate_springs(ts, ys, u_i, y_i, path="anis/animation.gif", frame_skip=1):
     return path
 
 
-def generalized_animation(ts, ys, u_i, y_i, path="anis/ganimation.gif", frame_skip=1):
+def generalized_animation(ts, thetas, u_i, y_i, path="anis/ganimation.gif", frame_skip=1):
     """Animates the spring movement based on the solution array."""
     time_steps = len(ts)
     # frame_skip = max(1, time_steps // 200)  # Adjust frame skip to manage animation length
 
     ell = max(u_i) - min(u_i)
-    solution = np.array(ys)
+    solution = np.array(thetas)
 
     n_vars = int(solution.shape[1] // 2)
     linspace_points = 1000 if n_vars <= 100 else 10000
@@ -192,7 +192,7 @@ def generalized_animation(ts, ys, u_i, y_i, path="anis/ganimation.gif", frame_sk
             y_val = init_i + slope * dif
 
             x_spring, y_spring = spring(
-                [u_i[i], y_i[i]], [u_i[i], y_val], nodes=10, width=0.1
+                [u_i[i], y_i[i]], [u_i[i], y_val], nodes=10, width=0.08
             )
             spring_line.set_data(x_spring, y_spring)
 
@@ -211,7 +211,7 @@ def generalized_animation(ts, ys, u_i, y_i, path="anis/ganimation.gif", frame_sk
     return path
 
 
-def generalized_single_frame(ts, ys, u_i, y_i, time_index=0, path="figs/single_frame_generalized.pdf", ax=None):
+def generalized_single_frame(ts, thetas, u_i, y_i, time_index=0, path="figs/single_frame_generalized.pdf", ax=None):
     """Saves a single frame of the system based on the solution array at a specified time index."""
     plt.rcParams.update({
         "text.usetex": True,
@@ -220,7 +220,7 @@ def generalized_single_frame(ts, ys, u_i, y_i, time_index=0, path="figs/single_f
     })
     plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-    solution = np.array(ys)
+    solution = np.array(thetas)
 
     n_vars = int(solution.shape[1] // 2)
     linspace_points = 1000 if n_vars <= 100 else 10000
@@ -358,29 +358,29 @@ def spring_3d(start, end, nodes, base_width):
 
     return spring_coords
 
-def generalized_animation_3d(ts, ys, u_i, y_i, n_pieces, sde, path="anis/animation_3d.gif", frame_skip=1):
+def generalized_animation_3d(ts, thetas, u_i, y_i, n_pieces, sde, path="anis/animation_3d.gif", frame_skip=1):
     """Animates the surface movement based on the solution array in 3D."""
     
     time_steps = len(ts)
-    n_vars = int(ys.shape[1] / 2)  # Assuming ys has x and y values for each grid point
+    n_vars = int(thetas.shape[1] / 2)  # Assuming ys has x and y values for each grid point
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(111, projection='3d')
 
     # Preparing the grid (assuming it's uniform)
-    u_x, u_y = np.meshgrid(np.linspace(u_i[0, :].min(), u_i[0, :].max(), n_pieces[0]), 
-                           np.linspace(u_i[1, :].min(), u_i[1, :].max(), n_pieces[1]))
+    u_x, u_y = np.meshgrid(np.linspace(sde.u_min[0], sde.u_max[0], n_pieces[0]), 
+                           np.linspace(sde.u_min[1], sde.u_max[1], n_pieces[1]))
     
     springs = [ax.plot([], [], [], 'gray')[0] for _ in range(len(u_i[0]))]
 
-    z_min = ys[:, :n_vars].min()
-    z_max = ys[:, :n_vars].max()
+    z_min = thetas[:, :n_vars].min()
+    z_max = thetas[:, :n_vars].max()
 
     z_min = np.min([z_min, y_i.min()])
     z_max = np.max([z_max, y_i.max()])
 
     def get_z_data(frame_number):
-        return np.array(ys[frame_number][:n_vars]).reshape(n_pieces)
+        return np.array(thetas[frame_number][:n_vars]).reshape(n_pieces)
 
     def init():
         return []
@@ -388,24 +388,24 @@ def generalized_animation_3d(ts, ys, u_i, y_i, n_pieces, sde, path="anis/animati
     def update(frame):
         # Clearing the axes allows for the new surface to be drawn without residual old data
         ax.clear()
-        ax.set_xlabel('X Axis')
-        ax.set_ylabel('Y Axis')
-        ax.set_zlabel('Z Axis')
+        ax.set_xlabel(r'$y$')
+        ax.set_ylabel(r'$x$')
+        ax.set_zlabel(r'$z$')
         zs = get_z_data(frame)
         ax.set_zlim(z_min, z_max)
-        ax.scatter(u_i[0, :], u_i[1, :], y_i[0, :], label="Data points", marker="x", c="black")
+        ax.scatter(u_i[:, 1], u_i[:, 0], y_i[:, 0], label="Data points", marker="x", c="black")
         ax.plot_surface(u_x, u_y, zs, cmap='viridis', alpha=0.5, edgecolor='k', linewidth=2)
         time_text.set_text(f"Time: {ts[frame]:.2f}s")
 
-        for i in range(len(u_i[0])):
+        for i in range(u_i.shape[0]):
             # Start and end points for the springs
-            start = np.array([u_i[0, i], u_i[1, i], y_i[0, i]])
-            y_pred = sde.num_y_prediction(u_i[:, i], ys[frame, :])
-            end = np.array([u_i[0, i], u_i[1, i], y_pred[0]])
+            start = np.array([u_i[i, 0], u_i[i, 1], y_i[i, 0]])
+            y_pred = sde.num_y_prediction(u_i[i, :], thetas[frame, :])
+            end = np.array([u_i[i, 0], u_i[i, 1], y_pred[0][0]])
 
             # Generate spring coordinates and plot
             spring_coords = spring_3d(start, end, 50, 0.1)
-            ax.plot(spring_coords[0], spring_coords[1], spring_coords[2], 'gray')
+            ax.plot(spring_coords[1], spring_coords[0], spring_coords[2], 'gray')
 
         return fig,
 
@@ -427,7 +427,7 @@ import os
 import numpy as np
 from scipy.io.wavfile import write
 
-def generate_sound_from_surface(ts, ys, n_pieces, path="anis/sounds/spring_sound.wav", frame_skip=1):
+def generate_sound_from_surface(ts, thetas, n_pieces, path="anis/sounds/spring_sound.wav", frame_skip=1):
     """
     Generates a sound representation for the time evolution of a surface based on the change
     in z-values, where greater changes produce higher pitches and smaller changes produce
@@ -448,15 +448,15 @@ def generate_sound_from_surface(ts, ys, n_pieces, path="anis/sounds/spring_sound
     # Initialize the audio signal array
     audio_signal = np.zeros_like(time_array)
 
-    if isinstance(ys, torch.Tensor):
-        ys = ys.detach().cpu().numpy()
+    if isinstance(thetas, torch.Tensor):
+        thetas = thetas.detach().cpu().numpy()
 
     # Frequency mapping based on changes: define the range
     min_frequency = 800  # Minimum frequency in Hz
     max_frequency = 1500  # Maximum frequency in Hz
 
     # Calculate changes in z-values between consecutive frames
-    delta_zs = np.diff(ys[:, :n_pieces[0] * n_pieces[1]], axis=0)
+    delta_zs = np.diff(thetas[:, :n_pieces[0] * n_pieces[1]], axis=0)
     delta_zs = np.vstack([delta_zs[0], delta_zs])  # Duplicate first frame for initial delta
 
     for i, frame in enumerate(range(0, len(ts), frame_skip)):
@@ -480,7 +480,7 @@ def generate_sound_from_surface(ts, ys, n_pieces, path="anis/sounds/spring_sound
 
     return path
 
-def create_video_3d(ts, ys, u_i, y_i, n_pieces, sde, gif_path="anis/temp_animation.gif", sound_path="anis/temp_sound.wav", video_path="anis/video.mp4"):
+def create_video_3d(ts, thetas, u_i, y_i, n_pieces, sde, gif_path="anis/temp_animation.gif", sound_path="anis/temp_sound.wav", video_path="anis/video.mp4"):
     """
     Creates a 3D animation, generates an associated sound, and merges both into a video file.
     It then deletes the intermediary GIF and sound files.
@@ -496,10 +496,10 @@ def create_video_3d(ts, ys, u_i, y_i, n_pieces, sde, gif_path="anis/temp_animati
     :param video_path: The path to save the final video.
     """
     # Generate 3D animation GIF
-    generalized_animation_3d(ts, ys, u_i, y_i, n_pieces, sde, path=gif_path)
+    generalized_animation_3d(ts, thetas, u_i, y_i, n_pieces, sde, path=gif_path)
     
     # Generate sound from the animation data
-    generate_sound_from_surface(ts, ys, n_pieces, path=sound_path)
+    generate_sound_from_surface(ts, thetas, n_pieces, path=sound_path)
     
     # Merge GIF and sound into a video
     ffmpeg_command = [

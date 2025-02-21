@@ -1,6 +1,8 @@
 data/
 anis/
 figs/
+profiling/*.prof
+profiling/*.png
 run_job.sh
 log_springs.txt
 

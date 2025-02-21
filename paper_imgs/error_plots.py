@@ -70,7 +70,7 @@ def plot_errors(n_sticks_list, errors_dict, errors_std_dict):
     plt.figure()
     
     markers = ['o', 's', '^', 'd']  # Different markers for each function
-    colors = plt.cm.viridis(np.linspace(0, 1, len(errors_dict)+1))  # Different colors for each function
+    colors = plt.cm.inferno(np.linspace(0, 1, len(errors_dict)+1))  # Different colors for each function
     
     for i, (func_name, errors) in enumerate(errors_dict.items()):
         err = errors_std_dict[func_name]

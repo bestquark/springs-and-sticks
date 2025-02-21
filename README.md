@@ -5,3 +5,10 @@ Here you can find the code for the project "Learning with springs and sticks". `
 The main code can be found in the `src/` folder. Animations and figures for this project can be found in the `anis/` and `figs/` folders, respectively.
 
 To classify the MNIST dataset with the springstick model, run the `mnist.py` script.
+
+
+For profiling 
+
+```
+!gprof2dot -f pstats profile_stats.prof | dot -Tpng -o profile.png
+```
