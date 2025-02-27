@@ -342,7 +342,7 @@ class GS3DE(nn.Module):
         return step.t()
 
     def g(self, t, theta):
-        return self.eta_cte * torch.ones_like(theta)
+        return torch.cat([self.eta_cte * torch.zeros_like(theta[:, :self.N]), torch.ones_like(theta[:, self.N:])], dim=1)
 
     def cost(self, theta):
         q = theta[:, :self.N].t()

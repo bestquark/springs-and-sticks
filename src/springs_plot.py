@@ -388,13 +388,16 @@ def generalized_animation_3d(ts, thetas, u_i, y_i, n_pieces, sde, path="anis/ani
     def update(frame):
         # Clearing the axes allows for the new surface to be drawn without residual old data
         ax.clear()
-        ax.set_xlabel(r'$y$')
-        ax.set_ylabel(r'$x$')
-        ax.set_zlabel(r'$z$')
+        ax.set_xlabel(r'$y$', fontsize=20)
+        ax.set_ylabel(r'$x$', fontsize=20)
+        ax.set_zlabel(r'$z$', fontsize=20)
+
+        ax.tick_params(axis='both', which='major', labelsize=20)
+
         zs = get_z_data(frame)
         ax.set_zlim(z_min, z_max)
         ax.scatter(u_i[:, 1], u_i[:, 0], y_i[:, 0], label="Data points", marker="x", c="black")
-        ax.plot_surface(u_x, u_y, zs, cmap='viridis', alpha=0.5, edgecolor='k', linewidth=2)
+        ax.plot_surface(u_x, u_y, zs, cmap='inferno', alpha=0.5, edgecolor='k', linewidth=2)
         time_text.set_text(f"Time: {ts[frame]:.2f}s")
 
         for i in range(u_i.shape[0]):
@@ -407,6 +410,8 @@ def generalized_animation_3d(ts, thetas, u_i, y_i, n_pieces, sde, path="anis/ani
             spring_coords = spring_3d(start, end, 50, 0.1)
             ax.plot(spring_coords[1], spring_coords[0], spring_coords[2], 'gray')
 
+        plt.tight_layout()
+
         return fig,
 
     time_text = ax.text2D(0.05, 0.95, "", transform=ax.transAxes, color="black")
@@ -416,6 +421,101 @@ def generalized_animation_3d(ts, thetas, u_i, y_i, n_pieces, sde, path="anis/ani
     writer = PillowWriter(fps=20)
     ani.save(path, writer=writer)
 
+    return path
+
+
+def plot_final_frame_3d(ts, thetas, u_i, y_i, n_pieces, sde, path="figs/general_final_frame.pdf", frame=-1):
+    """
+    Plots the final frame of the 3D animation and saves it as a PDF.
+    
+    Parameters:
+      ts      : array of time steps
+      thetas  : array containing surface data for each time step; assumed to be shaped (T, 2*n_vars)
+      u_i     : array of grid point coordinates, shape (N, 2)
+      y_i     : array of data point z-values, shape (N, 1) or (N,)
+      n_pieces: tuple indicating the grid shape (nx, ny)
+      sde     : object with attributes u_min, u_max and method num_y_prediction for computing predictions
+      pdf_path: output path for the PDF file
+    """
+    n_vars = int(thetas.shape[1] / 2)
+    
+    # Prepare the grid
+    u_x, u_y = np.meshgrid(
+        np.linspace(sde.u_min[0], sde.u_max[0], n_pieces[0]),
+        np.linspace(sde.u_min[1], sde.u_max[1], n_pieces[1])
+    )
+    
+    # Determine z-limits from both thetas and y_i
+    # z_min = min(thetas[:, :n_vars].min(), np.min(y_i))
+    # z_max = max(thetas[:, :n_vars].max(), np.max(y_i))
+
+    z_min = thetas[frame, :n_vars].min()
+    z_max = thetas[frame, :n_vars].max()
+
+    z_min = np.min([z_min, y_i.min()])
+    z_max = np.max([z_max, y_i.max()])
+    
+    # Get the surface data for the final frame and reshape
+    zs = np.array(thetas[frame][:n_vars]).reshape(n_pieces)
+    
+    # Create the figure and 3D axis
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel(r'$y$', fontsize=20, labelpad=20)
+    ax.set_ylabel(r'$x$', fontsize=20, labelpad=20)
+    ax.set_zlabel(r'$z$', fontsize=20, labelpad=20)
+
+    # ax.set_zlim(z_min, z_max)
+    ax.set_xlim(sde.u_min[1], sde.u_max[1])
+    ax.set_ylim(sde.u_min[0], sde.u_max[0])
+    
+    # x and y ticks with fontsize of 20
+    ax.tick_params(axis='both', which='major', labelsize=20)
+
+    
+    # Scatter plot of data points
+    ax.scatter(u_i[:, 1], u_i[:, 0], np.ravel(y_i), label="Data points", marker="x", c="black")
+
+    for i in range(u_i.shape[0]):
+        y_pred = sde.num_y_prediction(u_i[i, :], thetas[frame, :])
+        # If the measured value is below or equal to the prediction, we want the spring under the surface.
+        if y_i[i, 0] <= y_pred[0][0]:
+            start = np.array([u_i[i, 0], u_i[i, 1], y_i[i, 0]])
+            end = np.array([u_i[i, 0], u_i[i, 1], y_pred[0][0]])
+            spring_coords = spring_3d(start, end, 50, 0.1)
+            ax.plot(spring_coords[1], spring_coords[0], spring_coords[2], 'gray')
+    
+    # Plot the surface.
+    ax.plot_surface(u_x, u_y, zs, cmap='inferno', alpha=0.5, edgecolor='k', linewidth=2)
+    
+    # Then, plot springs that should appear on top.
+    for i in range(u_i.shape[0]):
+        y_pred = sde.num_y_prediction(u_i[i, :], thetas[frame, :])
+        if y_i[i, 0] > y_pred[0][0]:
+            start = np.array([u_i[i, 0], u_i[i, 1], y_i[i, 0]])
+            end = np.array([u_i[i, 0], u_i[i, 1], y_pred[0][0]])
+            spring_coords = spring_3d(start, end, 50, 0.1)
+            ax.plot(spring_coords[1], spring_coords[0], spring_coords[2], 'gray')
+    
+    
+    # Plot the surface
+    # ax.plot_surface(u_x, u_y, zs, cmap='inferno', alpha=0.5, edgecolor='k', linewidth=2)
+
+    # # Plot springs for each data point
+    # for i in range(u_i.shape[0]):
+    #     start = np.array([u_i[i, 0], u_i[i, 1], y_i[i, 0] if y_i.ndim > 1 else y_i[i]])
+    #     y_pred = sde.num_y_prediction(u_i[i, :], thetas[frame, :])
+    #     end = np.array([u_i[i, 0], u_i[i, 1], y_pred[0][0]])
+    #     # spring_3d should be defined elsewhere; it returns coordinates as (x, y, z)
+    #     spring_coords = spring_3d(start, end, 50, 0.1)
+    #     ax.plot(spring_coords[1], spring_coords[0], spring_coords[2], 'gray')
+    
+    # Optionally add a time label
+    # ax.text2D(0.05, 0.95, f"Time: {ts[frame]:.2f}s", transform=ax.transAxes, color="black")
+    
+    # Save the figure as a PDF
+    plt.tight_layout()
+    fig.savefig(path, format="pdf")
     return path
 
 
