@@ -178,8 +178,8 @@ class GS3DE(nn.Module):
         self.kb = kb
 
         self.temp = temp
-        self.friction = float(friction / self.M)
-        self.eta_cte = float(np.sqrt(2 * self.friction * temp * kb))
+        self.friction = float(friction)
+        self.eta_cte = float(np.sqrt(2 * self.friction * temp * kb / self.M))
         # self.friction = friction
         # self.eta_cte = np.sqrt(2 * self.friction * temp * kb / self.M)
 
@@ -360,5 +360,6 @@ class GS3DE(nn.Module):
 
     def loss(self, theta, u_i, y_i):
         """Compute the MSE loss using provided data."""        
-        loss = torch.sum((torch.tensor(self.num_y_prediction(u_i, theta)) - y_i) ** 2)
-        return loss / u_i.shape[0]
+        # loss = torch.sum((torch.tensor(self.num_y_prediction(u_i, theta)) - y_i) ** 2)
+        # return loss / u_i.shape[0]
+        return 2 * self.cost(theta) / (u_i.shape[0]* self.k)
