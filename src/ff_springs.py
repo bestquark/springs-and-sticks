@@ -177,9 +177,11 @@ class GS3DE(nn.Module):
         self.M = M / torch.prod(self.n_sticks)
         self.kb = kb
 
-        self.friction = friction
         self.temp = temp
-        self.eta_cte = float(np.sqrt(2 * friction * temp * kb / M))
+        self.friction = float(friction / self.M)
+        self.eta_cte = float(np.sqrt(2 * self.friction * temp * kb))
+        # self.friction = friction
+        # self.eta_cte = np.sqrt(2 * self.friction * temp * kb / self.M)
 
         self.n_labels = n_labels  # used for symbolic variable shapes
 
@@ -276,7 +278,7 @@ class GS3DE(nn.Module):
         self.evol_dynamics = simplify(self.inv_mass_matrix * self.forcing_vector)
         self.lambdified_dyn = lambdify(
             [*self.x_symbols.flatten(), *self.dx_symbols.flatten()],
-            self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1, 1) / self.N
+            self.evol_dynamics - self.friction * self.dx_symbols.reshape(-1, 1)
         )
         self.ue = lambdify([*self.x_symbols.flatten()], self.U)
 
@@ -342,11 +344,19 @@ class GS3DE(nn.Module):
         return step.t()
 
     def g(self, t, theta):
-        return torch.cat([self.eta_cte * torch.zeros_like(theta[:, :self.N]), torch.ones_like(theta[:, self.N:])], dim=1)
+        # return self.eta_cte * torch.ones_like(theta)
+        return torch.cat([torch.zeros_like(theta[:, :self.N]), self.eta_cte*torch.ones_like(theta[:, self.N:])], dim=1)
 
     def cost(self, theta):
         q = theta[:, :self.N].t()
         return self.ue(*q)
+    
+    def dcost(self, theta):
+        dUdt = self.U.diff()
+        q = theta[:, :self.N].t()
+        dq = theta[:, self.N:].t()
+        dUdt_num = lambdify([*self.x_symbols.flatten(), *self.dx_symbols.flatten()], dUdt)
+        return dUdt_num(*q, *dq)
 
     def loss(self, theta, u_i, y_i):
         """Compute the MSE loss using provided data."""        

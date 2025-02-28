@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import sympy as sp
 from sympy.physics.mechanics import LagrangesMethod
+from scipy.integrate import simpson
+
 
 def get_xxt_avg(ys):
     yse = ys[:, :, :, None]
@@ -37,7 +39,7 @@ def get_Ab(sde):
     minvf = LM.mass_matrix_full.pinv() @ LM.forcing_full
 
     # Add friction term
-    fric_term = - sde.friction * sde.dx_symbols.reshape(-1, 1) / sde.N 
+    fric_term = - sde.friction * sde.dx_symbols.reshape(-1, 1) 
     fric_term = np.vstack((np.zeros((sde.x_symbols.shape[0], 1)), fric_term))
     minvf += fric_term
 
@@ -81,7 +83,8 @@ def get_Abqp(sde):
 
 def getPit(ys, sde):
     theta = get_theta(ys)
-    diag = sde.eta_cte * torch.ones(ys.shape[2])
+    # diag = sde.eta_cte * torch.ones(ys.shape[2])
+    diag = torch.cat([torch.zeros(ys.shape[2]//2), sde.eta_cte * torch.ones(ys.shape[2]//2)])
     Dtensor = get_Dtensor(diag)
     Aq, bq, _, _ = get_Abqp(sde)
     x_avg = get_x_avg(ys)
@@ -90,15 +93,17 @@ def getPit(ys, sde):
     bq = torch.tensor(bq).squeeze()
     vec = torch.vmap(lambda x: Aq @ x - bq)(x_avg)
 
+    Dtensor_inv = torch.linalg.pinv(Dtensor)
     t1 = torch.vmap(torch.trace)(Dtensor @ theta.inverse() - Aq)
-    t2 = torch.vmap(torch.trace)(Aq.T @ torch.linalg.inv(Dtensor) @ Aq @ theta - Aq)
-    t3 = torch.vmap(lambda x: x.T @ torch.linalg.inv(Dtensor) @ x)(vec)
+    t2 = torch.vmap(torch.trace)(Aq.T @ Dtensor_inv @ Aq @ theta - Aq)
+    t3 = torch.vmap(lambda x: x.T @ Dtensor_inv @ x)(vec)
 
     return t1 + t2 + t3
 
 def getPhit(ys, sde):
     theta = get_theta(ys).to(torch.float64)
-    diag = sde.eta_cte * torch.ones(ys.shape[2])
+    # diag = sde.eta_cte * torch.ones(ys.shape[2])
+    diag = torch.cat([torch.zeros(ys.shape[2]//2), sde.eta_cte * torch.ones(ys.shape[2]//2)])
     Dtensor = get_Dtensor(diag).to(torch.float64)
     _, _, Aq, bq = get_Abqp(sde)
     x_avg = get_x_avg(ys).to(torch.float64)
@@ -107,18 +112,46 @@ def getPhit(ys, sde):
     bq = torch.tensor(bq).squeeze()
     vec = torch.vmap(lambda x: Aq @ x - bq)(x_avg)
 
-    t1 = torch.vmap(torch.trace)(Aq.T @ torch.linalg.inv(Dtensor) @ Aq @ theta - Aq)
-    t2 = torch.vmap(lambda x: x.T @ torch.linalg.inv(Dtensor) @ x)(vec)
+    Dtensor_inv = torch.linalg.pinv(Dtensor)
+    t1 = torch.vmap(torch.trace)(Aq.T @ Dtensor_inv @ Aq @ theta - Aq)
+    t2 = torch.vmap(lambda x: x.T @ Dtensor_inv @ x)(vec)
 
     return t1 + t2
+
+def getdSdt(ys, sde):
+    theta = get_theta(ys)
+    # diag = sde.eta_cte * torch.ones(ys.shape[2])
+    diag = torch.cat([torch.zeros(ys.shape[2]//2), sde.eta_cte * torch.ones(ys.shape[2]//2)])
+    Dtensor = get_Dtensor(diag)
+    Aq, bq, _, _ = get_Abqp(sde)
+    x_avg = get_x_avg(ys)
+    
+    Aq = torch.tensor(Aq)
+    bq = torch.tensor(bq).squeeze()
+    t1 = torch.vmap(torch.trace)(Dtensor @ theta.inverse() - Aq)
+
+    return t1
 
 def get_entropy_rates(ys, sde):
     "Returns Pi(t), Phi(t), and dS/dt = Pi(t) - Phi(t)"
     pit = getPit(ys, sde)
     phit = getPhit(ys, sde)
-    return pit, phit, pit - phit
+    dSdt = getdSdt(ys, sde)
+    return pit, phit, dSdt
 
+def get_free_energy_rate(ys, sde):
+    "Returns the free energy rate dF/dt"
+    T = sde.temp
+    kb = sde.kb
+    dSdt = getdSdt(ys, sde)
+    dUdt = torch.mean(torch.stack([sde.dcost(ys[:, i, :]) for i in range(ys.shape[1])]), dim=0)
+    
+    return dUdt -kb * T * dSdt
 
+def get_free_energy(time, ys, sde):
+    dFdt = get_free_energy_rate(ys, sde)
+    F = simpson(dFdt, x=time)
+    return F
 
 # import torch
 # import numpy as np
