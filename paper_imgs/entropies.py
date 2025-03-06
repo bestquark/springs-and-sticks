@@ -7,7 +7,7 @@ import torch
 import torchsde
 
 from src.ff_springs import GS3DE
-from src.entropy import get_entropy_rates, get_free_energy, get_free_energy_rate
+from src.entropy import get_entropy_rates, get_free_energy
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -136,27 +136,28 @@ def run_simulation(dim, n_points, temp, k, M, fric, target_function):
     costs_std = all_costs.std(axis=1)
     costs_var = all_costs.var(axis=1)
     pit, phit, dSdt = get_entropy_rates(thetas, sde)
-    dF = get_free_energy_rate(thetas, sde)
+    # dF = get_free_energy_rate(thetas, sde)
     FE = get_free_energy(ts, thetas, sde)
     
 
-    costs_mean = np.array(costs_mean)
-    costs2_mean = np.array(costs2_mean)
-    costs_std = np.array(costs_std)
-    costs_var = np.array(costs_var)
-    snr = 10 * np.log10(costs2_mean / costs_var)
+    # costs_mean = np.array(costs_mean)
+    # costs2_mean = np.array(costs2_mean)
+    # costs_std = np.array(costs_std)
+    # costs_var = np.array(costs_var)
+    # cost_snr = 10 * np.log10(costs2_mean / costs_var)
     
     results = {
         'ts': ts,
         'pit': pit,
         'phit': phit,
         'dsdt': dSdt,
-        'df': dF,
+        # 'df': dF,
         'fe': FE,
-        'snr': snr,
+        # 'cost_snr': cost_snr,
         'costs_mean': costs_mean,
         'costs_std': costs_std,
-        'all_costs': all_costs
+        'all_costs': all_costs,
+        'thetas': thetas,   
     }
 
     return results
@@ -191,10 +192,10 @@ if __name__ == '__main__':
 
     k_values = np.logspace(-10, -30, 10)
     M_values = np.logspace(-10, -30, 10)
-    n_points = [20]
-    fric_values = [8]
-    temps = [1]
-    function_names = [r'x']
+    n_points = [20, 40, 80]
+    fric_values = [4, 8, 16, 32]
+    temps = [0.1, 1, 10]
+    function_names = [r'x', r'x^2', r'x^3', r'\sin(x)', r'\cos(x)', r'\exp(x)']
 
     os.makedirs('data', exist_ok=True)
     result_file = 'data/entropy_results.pkl'

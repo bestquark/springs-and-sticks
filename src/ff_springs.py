@@ -178,7 +178,7 @@ class GS3DE(nn.Module):
         self.kb = kb
 
         self.temp = temp
-        self.friction = float(friction)
+        self.friction = float(friction) # fric is defined as friction per unit mass
         self.eta_cte = float(np.sqrt(2 * self.friction * temp * kb / self.M))
         # self.friction = friction
         # self.eta_cte = np.sqrt(2 * self.friction * temp * kb / self.M)
@@ -357,6 +357,19 @@ class GS3DE(nn.Module):
         dq = theta[:, self.N:].t()
         dUdt_num = lambdify([*self.x_symbols.flatten(), *self.dx_symbols.flatten()], dUdt)
         return dUdt_num(*q, *dq)
+    
+    def dw(self, theta):
+        "derivative of the work with respect to time"
+        q = theta[:, :self.N].t()
+        dq = theta[:, self.N:].t()
+
+        # force of the system
+        ddqdt = torch.tensor(self.lambdified_dyn(*q, *dq)).squeeze()
+
+        # F \dot v
+        dwdt = torch.sum((ddqdt * dq), dim=0) * self.M
+        return dwdt
+
 
     def loss(self, theta, u_i, y_i):
         """Compute the MSE loss using provided data."""        

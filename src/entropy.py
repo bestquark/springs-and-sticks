@@ -139,19 +139,37 @@ def get_entropy_rates(ys, sde):
     dSdt = getdSdt(ys, sde)
     return pit, phit, dSdt
 
-def get_free_energy_rate(ys, sde):
-    "Returns the free energy rate dF/dt"
+# def get_free_energy_rate(ys, sde):
+#     "Returns the free energy rate dF/dt"
+#     T = sde.temp
+#     kb = sde.kb
+#     dSdt = getdSdt(ys, sde)
+#     dUdt = torch.mean(torch.stack([sde.dcost(ys[:, i, :]) for i in range(ys.shape[1])]), dim=0)
+    
+#     return dUdt -kb * T * dSdt
+
+# def get_free_energy(time, ys, sde):
+#     dFdt = get_free_energy_rate(ys, sde)
+#     F = simpson(dFdt, x=time)
+#     return F
+
+def _DF_from_work(work, sde):
     T = sde.temp
     kb = sde.kb
-    dSdt = getdSdt(ys, sde)
-    dUdt = torch.mean(torch.stack([sde.dcost(ys[:, i, :]) for i in range(ys.shape[1])]), dim=0)
-    
-    return dUdt -kb * T * dSdt
+    beta = 1.0 / (kb * T)
+    work = torch.tensor(work, dtype=torch.float64)
+    N = work.numel()
+    log_mean_exp = torch.logsumexp(-beta * work, dim=0) - torch.log(torch.tensor(N, dtype=torch.float64))
+    DF = - (1.0 / beta) * log_mean_exp
+    return DF
+
 
 def get_free_energy(time, ys, sde):
-    dFdt = get_free_energy_rate(ys, sde)
-    F = simpson(dFdt, x=time)
-    return F
+    "Returns the free energy using the Jarzynski equality"
+    batch_size = ys.shape[1]
+    dworks = torch.stack([sde.dw(ys[:, i, :]) for i in range(batch_size)], dim=1)
+    work = simpson(dworks, x=time, axis=0)
+    return _DF_from_work(work, sde)
 
 # import torch
 # import numpy as np
