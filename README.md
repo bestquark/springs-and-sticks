@@ -24,4 +24,14 @@ cd springs-and-sticks
 pip install -e .
 ```
 
+### Usage
 
+(Coming soon)
+
+### Development
+
+If you are profiling, run the following to visualize the results:
+
+```
+!gprof2dot -f pstats profile_stats.prof | dot -Tpng -o profile.png
+```
