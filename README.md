@@ -8,19 +8,18 @@ Here you can find the code for the project "Learning with springs and sticks". T
 
 The main code can be found in the `src/` folder and the code for generating the paper's figures can be found in `paper_imgs/`. Animations and figures for this project can be found in the `anis/` and `figs/` folders, respectively.
 
-A simple tutorial on the model is provided in the `springs_and_sticks.ipynb` file. This notebook contains minimal working examples of the model.
+<!-- A simple tutorial on the model is provided in the `springs_and_sticks.ipynb` file. This notebook contains minimal working examples of the model. -->
 
 ### Installation
 
-To use this model, create a virtual environment and install the required packages by running
+To use this model, clone this repository, create a virtual environment and install this package by running
+
 ```
 python -m venv springsenv
 source springsenv/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/bestquark/springs-and-sticks.git
+cd springs-and-sticks
+pip install -e .
 ```
-
-
-
-
 
 

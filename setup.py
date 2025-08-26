@@ -1,0 +1,45 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="ss",
+    version="0.1.0",
+    description="Learning with springs and sticks - A physics-inspired machine learning approach",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    author="Luis Mantilla",
+    url="https://github.com/bestquark/springs-and-sticks",
+    packages=["ss"],
+    package_dir={"ss": "src"},
+    python_requires=">=3.8",
+    install_requires=[
+        "matplotlib==3.6.0",
+        "numpy==1.26.4",
+        "sympy==1.12",
+        "torch==2.2.2",
+        "torchsde==0.2.6",
+        "torchvision==0.17.2",
+        "scikit-learn==1.5.0",
+    ],
+    extras_require={
+        "dev": [
+            "pytest",
+            "pytest-cov",
+            "black",
+            "isort",
+            "flake8",
+        ],
+    },
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Physics",
+    ],
+    include_package_data=True,
+)

@@ -2,7 +2,7 @@ import torch
 import torchsde
 import numpy as np
 
-from src.ff_springs import GroupGS3DE
+from model import GroupGS3DE
 from torch.utils.data import TensorDataset, DataLoader
 import cProfile
 

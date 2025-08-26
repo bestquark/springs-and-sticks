@@ -8,7 +8,7 @@ import torchsde
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import TensorDataset, DataLoader
-from src.ff_springs import GroupGS3DE, GS3DE
+from model import GroupGS3DE, GS3DE
 import matplotlib.ticker as ticker
 
 

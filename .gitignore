@@ -1,8 +1,12 @@
+springs_and_sticks.ipynb
+
 data/
-anis/
-figs/
-profiling/*.prof
-profiling/*.png
+anis2/
+figs2/
+deprecated/
+profiling/
+README_DEV.md
+
 run_job.sh
 log_springs.txt
 

@@ -6,7 +6,7 @@ import pickle
 import torch
 import torchsde
 
-from src.ff_springs import GS3DE
+from model import GS3DE
 from src.entropy import get_entropy_rates, get_free_energy
 
 from concurrent.futures import ProcessPoolExecutor, as_completed

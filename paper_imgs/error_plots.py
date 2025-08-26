@@ -4,7 +4,7 @@ import torchsde
 import matplotlib.pyplot as plt
 import multiprocessing
 
-from src.speed_springs import GS3DE
+from model import GS3DE
 
 plt.rcParams.update({
         "text.usetex": True,
@@ -38,7 +38,7 @@ def target_functions():
 def compute_errors(function_name, function, n_sticks_list, u_i):
     errors, errors_std = [], []
     y_i = function(u_i)
-    boundaries = (torch.min(u_i, dim=1).values, torch.max(u_i, dim=1).values)
+    boundaries = (torch.min(u_i, dim=0).values, torch.max(u_i, dim=0).values)
     n_labels = y_i.shape[0]
     
     for ns in n_sticks_list:
@@ -109,18 +109,18 @@ def plot_errors(n_sticks_list, errors_dict, errors_std_dict):
 
 def main():
     n_sticks_list = [3, 4, 5, 6, 7, 8, 9]
-    # torch.manual_seed(0)
-    # u_i = torch.linspace(0, 2*torch.pi, 20).reshape(1, -1)
+    torch.manual_seed(0)
+    u_i = torch.linspace(0, 2*torch.pi, 20).reshape(1, -1)
     
-    # with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-    #     results = pool.starmap(compute_errors, [(func_name, func, n_sticks_list, u_i) for func_name, func in target_functions().items()])
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        results = pool.starmap(compute_errors, [(func_name, func, n_sticks_list, u_i) for func_name, func in target_functions().items()])
     
-    # errors_dict = {func_name: errors for func_name, errors, _ in results}
-    # errors_std_dict = {func_name: errors_std for func_name, _, errors_std in results}
+    errors_dict = {func_name: errors for func_name, errors, _ in results}
+    errors_std_dict = {func_name: errors_std for func_name, _, errors_std in results}
     
-    # # Save dicts
-    # np.save('data/errors_dict.npy', errors_dict)
-    # np.save('data/errors_std_dict.npy', errors_std_dict)
+    # Save dicts
+    np.save('data/errors_dict.npy', errors_dict)
+    np.save('data/errors_std_dict.npy', errors_std_dict)
 
     # Load dicts
     errors_dict = np.load('data/errors_dict.npy', allow_pickle=True).item()

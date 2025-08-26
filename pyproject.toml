@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ss"
+version = "0.1.0"
+description = "Learning with springs and sticks - A physics-inspired machine learning approach"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Luis Mantilla"},
+]
+keywords = ["machine learning", "physics", "springs", "sticks", "differential equations"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "matplotlib==3.6.0",
+    "numpy==1.26.4",
+    "sympy==1.12",
+    "torch==2.2.2",
+    "torchsde==0.2.6",
+    "torchvision==0.17.2",
+    "scikit-learn==1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+]
+
+[project.urls]
+Homepage = "https://github.com/bestquark/springs-and-sticks"
+Repository = "https://github.com/bestquark/springs-and-sticks"
+Issues = "https://github.com/bestquark/springs-and-sticks/issues"
+
+[tool.setuptools]
+packages = ["ss"]
+package-dir = {"ss" = "src"}
