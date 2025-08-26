@@ -146,18 +146,24 @@
   <div class="container is-max-desktop">
     <div class="columns is-centered">
       <div class="column is-four-fifths">
-        <h2 class="title is-3">How the Model Learns</h2>
+        <h2 class="title is-3">The springs and sticks model</h2>
         <div class="content has-text-justified">
           <p>
-            The dynamics of the springs-and-sticks learner are governed by a Langevin equation, 
+            The springs and sticks (SS) model is defined by attaching springs from data points to a grid of sticks. By
+            dissipating the elastic potential energy, the system relaxes to a minimum-energy configuration that equivalently minimizes a mean-squared error loss.
+            The dynamics of the SS system are governed by a Langevin equation,
             which describes noisy, damped motion toward configurations that minimize the energy:
           </p>
 
           $$
-          \frac{d}{dt}\mathbf{x} = \dot{\mathbf{x}}, \qquad
-          \frac{d}{dt}\dot{\mathbf{x}} = \mathbf{M}^{-1} \big(-\nabla_{\mathbf{x}}U(\mathbf{x},t)\big)
-          - \gamma\,\dot{\mathbf{x}} + \sigma\,\dot{\boldsymbol{\xi}}(t).
+            \begin{aligned}
+            \frac{d}{dt} \mathbf{x} &= \mathbf{\dot{x}}, \\
+            \frac{d}{dt} \mathbf{\dot{x}} &= {\mathbf{M}}^{-1} \mathbf{f}(\mathbf{x}, \mathbf{\dot{x}},t) - \gamma \mathbf{\dot{x}} + \sigma \dot{\mathbf{\xi}} (t).
+            \end{aligned}
           $$
+
+          Here, $\mathbf{x}$ are the node positions, $\mathbf{M}$ is the mass matrix, $\mathbf{f}$ are the forces from the springs, $\gamma$ is a damping coefficient, and $\sigma \dot{\mathbf{\xi}} (t)$ is a Gaussian noise term with strength $\sigma$ related to an effective temperature $T$ via the fluctuation-dissipation theorem: $\sigma^2 = 2 k_b T \gamma / M$.
+
 
           <p>
             The figure below shows the evolution of node positions under different choices of
@@ -166,26 +172,35 @@
 
           <div class="has-text-centered">
             <img src="static/images/positions_multiple_params_ff_temp.pdf" 
-                 alt="Node trajectories under different parameters" width="90%">
+                 alt="Node trajectories under different parameters" width="70%">
           </div>
 
+          <h2 class="title is-3">Approximating any smooth function</h2>
+
+
           <p>
-            We compare our mechanical learner to standard neural networks. 
+            We compare our SS model to one layer MLPs. 
             Despite its simplicity, the model achieves comparable regression accuracy to MLPs.
-            This is because the sticks perform a <em>piecewise-linear (trapezoidal) approximation</em>,
+            This is because the sticks-grid perform a <em>piecewise-linear (trapezoidal) approximation</em>,
             which is a universal function approximator.
           </p>
 
           <div class="has-text-centered">
             <img src="static/images/grid_plot_sde_vs_mlp_new3.pdf" 
-                 alt="Comparison with neural networks" width="90%">
+                 alt="Comparison with neural networks" width="100%">
           </div>
+
+          
+          <h2 class="title is-3">Thermodynamic limits</h2>
 
           <p>
             Finally, we analyze the thermodynamics of learning. 
-            We find that when the system’s free-energy change saturates due to environmental fluctuations,
+            We find that when the system's free-energy change saturates due to environmental fluctuations, calculated via the Jarzynski equality
+            $$
+             \Delta F = k_b T \ln \langle e^{-W/k_b T} \rangle,
+            $$
             learning fails — a phenomenon we call the 
-            <strong>thermodynamic learning barrier</strong>.
+            <strong>thermodynamic learning barrier</strong>. A way to think about this barrier is that learning requires a decrease in entropy, but when the system is too noisy (in small scales), this entropy decrease is no longer possible.
           </p>
 
           <div class="has-text-centered">
@@ -197,71 +212,6 @@
     </div>
   </div>
 </section>
-
-
-<!-- Image carousel -->
-<!-- <section class="hero is-small">
-  <div class="hero-body">
-    <div class="container">
-      <div id="results-carousel" class="carousel results-carousel">
-        <div class="item">
-          <img src="static/images/carousel1.jpg" alt="3D view of sticks grid with springs to datapoints"/>
-          <h2 class="subtitle has-text-centered">
-            SS model on a Z<sub>5×5</sub> grid fitting f(x,y)=x²+x·y² with datapoints sampled from U([−π,π]²).
-          </h2>
-        </div>
-        <div class="item">
-          <img src="static/images/carousel2.jpg" alt="Dynamics 
-          
-          trace of stick endpoint under different γ and T"/>
-          <h2 class="subtitle has-text-centered">
-            Langevin dynamics: endpoint trajectories under varying friction γ and temperature T.
-          </h2>
-        </div>
-        <div class="item">
-          <img src="static/images/carousel3.jpg" alt="Loss curves comparing SS vs MLP on synthetic functions"/>
-          <h2 class="subtitle has-text-centered">
-            Regression benchmarks: SS matches single-layer MLPs on several smooth functions.
-          </h2>
-        </div>
-        <div class="item">
-          <img src="static/images/carousel4.jpg" alt="TLB contour and scaling with expressivity"/>
-          <h2 class="subtitle has-text-centered">
-            Thermodynamic Learning Barrier: scales with model expressivity and increases with T and γ.
-          </h2>
-        </div>
-      </div>
-    </div>
-  </div>
-</section> -->
-<!-- End image carousel -->
-
-<!-- Video carousel -->
-<!-- <section class="hero is-small">
-  <div class="hero-body">
-    <div class="container">
-      <h2 class="title is-3">Demos</h2>
-      <div id="results-carousel" class="carousel results-carousel">
-        <div class="item item-video1">
-          <video poster="" id="video1" autoplay controls muted loop height="100%">
-            <source src="static/videos/carousel1.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="item item-video2">
-          <video poster="" id="video2" autoplay controls muted loop height="100%">
-            <source src="static/videos/carousel2.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="item item-video3">
-          <video poster="" id="video3" autoplay controls muted loop height="100%">
-            <source src="static/videos/carousel3.mp4" type="video/mp4">
-          </video>
-        </div>
-      </div>
-    </div>
-  </div>
-</section> -->
-<!-- End video carousel -->
 
 
 <!-- BibTeX -->
