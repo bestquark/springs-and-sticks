@@ -138,8 +138,8 @@ class GS3DE(nn.Module):
     def __init__(self, n_sticks, boundaries, n_labels, friction=0, temp=0, k=1, M=1,
                  kb=1.38064852e-23, k2=0, verbose=False):
         """
-        GS3DE model where the non-potential Lagrangian is computed once.
-        
+        Generalized SS stochastic differential equation (GS3DE), where the non-potential Lagrangian is computed once.
+
         Parameters:
           n_sticks: int or array-like. If int, all input dimensions use the same number of pieces.
                     If array-like, it must have the same length as the input dimension.

@@ -20,10 +20,10 @@ plt.rcParams.update({
 })
 plt.rc('text.latex', preamble=r'\usepackage{amsmath, upgreek}')
 
-def train_function(func_name, func, num_epochs=10, batch_size=16, num_runs=1, t_size=2, fric=20, eps=0.01):
+def train_function(func_name, func, num_epochs=10, batch_size=16, num_runs=1, t_size=2, fric=10, eps=0.01):
     # Set seeds for reproducibility
-    torch.manual_seed(42)
-    np.random.seed(42)
+    torch.manual_seed(0)
+    np.random.seed(0)
     
     # Generate training data: 160 points in 2 dims
     N_train = 160
@@ -85,7 +85,7 @@ def train_function(func_name, func, num_epochs=10, batch_size=16, num_runs=1, t_
     optimizerf = optim.SGD(mlp_fixed.parameters(), lr=0.1)
     
     # Time steps for SDE integration
-    ts = torch.linspace(0, 1, t_size)
+    ts = torch.linspace(0, 0.1, t_size)
     
     # Containers for loss histories
     sde_train_losses = []
@@ -107,7 +107,7 @@ def train_function(func_name, func, num_epochs=10, batch_size=16, num_runs=1, t_
             # Update SDE with current batch (note transpose: shape becomes [features, batch_size])
             sde.update_data(u_batch, y_batch)
             theta0 = torch.rand(size=(num_runs, sde.state_size)) if theta0 is None else theta0
-            loss_sde = sde.loss(theta0.flatten(), u_batch, y_batch)
+            loss_sde = sde.loss(theta0.flatten().unsqueeze(0), u_batch, y_batch)
             sde_epoch_loss += loss_sde.item()
             with torch.no_grad():
                 thetas = torchsde.sdeint(sde, theta0, ts, method='euler')
@@ -143,7 +143,7 @@ def train_function(func_name, func, num_epochs=10, batch_size=16, num_runs=1, t_
         n_batch_test = len(loader_test)
         with torch.no_grad():
             for u_batch, y_batch in loader_test:
-                sde_test_loss += sde.loss(theta0.flatten(), u_batch, y_batch).item()
+                sde_test_loss += sde.loss(theta0.flatten().unsqueeze(0), u_batch, y_batch).item()
                 mlp_out = mlp(u_batch)
                 mlp_test_loss += criterion(mlp_out, y_batch).item()
                 mlpf_out = mlp_fixed(u_batch)
@@ -217,7 +217,7 @@ def plot_results(loaded_results, num_epochs=5):
 
     plt.tight_layout()
 
-    plt.savefig("figs/grid_plot_sde_vs_mlp.pdf")
+    plt.savefig("figs/grid_plot_sde_vs_mlp_new3.pdf")
     plt.show()
 
 def main():
@@ -235,27 +235,27 @@ def main():
     
     num_epochs = 10
 
-    # results_file = "data/results.json"
-    # if os.path.exists(results_file):
-    #     with open(results_file, "r") as f:
-    #         results = json.load(f)
-    # else:
-    #     results = {}
+    results_file = "data/results_new3.json"
+    if os.path.exists(results_file):
+        with open(results_file, "r") as f:
+            results = json.load(f)
+    else:
+        results = {}
 
-    # for func_name, func in functions.items():
-    #     if func_name in results:  # Skip already trained functions
-    #         print(f"Skipping {func_name}, already trained.")
-    #         continue
+    for func_name, func in functions.items():
+        if func_name in results:  # Skip already trained functions
+            print(f"Skipping {func_name}, already trained.")
+            continue
 
-    #     print(f"\n--- Training on function: {func_name} ---")
-    #     results[func_name] = train_function(func_name, func, num_epochs=num_epochs, batch_size=16)
+        print(f"\n--- Training on function: {func_name} ---")
+        results[func_name] = train_function(func_name, func, num_epochs=num_epochs, batch_size=16)
 
-    #     # Save results immediately after training each function
-    #     with open(results_file, "w") as f:
-    #         json.dump(results, f, indent=4)
+        # Save results immediately after training each function
+        with open(results_file, "w") as f:
+            json.dump(results, f, indent=4)
     
     # Load the results back from JSON
-    with open("data/results.json", "r") as f:
+    with open("data/results_new3.json", "r") as f:
         loaded_results = json.load(f)
     
     plot_results(loaded_results, num_epochs=num_epochs)
