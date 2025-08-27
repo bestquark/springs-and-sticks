@@ -1,6 +1,7 @@
 # Learning with springs and sticks 
 
 [![Website](https://img.shields.io/badge/Website-Live-blue)](https://bestquark.github.io/springs-and-sticks/)
+[![arXiv](https://img.shields.io/badge/arXiv-2508.19015-b31b1b.svg)](https://arxiv.org/abs/2508.19015)
 
 Here you can find the code for the project "Learning with springs and sticks". This project introduces an ML model based on a dissipative mechanical system composed of springs and sticks as shown below:
 
