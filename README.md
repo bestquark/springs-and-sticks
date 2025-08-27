@@ -26,7 +26,35 @@ pip install -e .
 
 ### Usage
 
-(Coming soon)
+After installing the package, you can run the model as:
+
+```python
+import torch
+import torchsde
+
+from ss.model import GS3DE
+
+torch.manual_seed(0)
+# dataset
+u_i = torch.linspace(0, 2*torch.pi, 20).unsqueeze(1)
+y_i = 0.1*torch.randn_like(u_i) + 1 + (-1/3)*u_i
+
+# boundaries of sticks grid
+boundaries = (torch.min(u_i, dim=0).values, torch.max(u_i, dim=0).values)
+n_labels = y_i.shape[1]
+
+# number of simulations and time steps
+ns = 1 
+batch_size, t_size = 100, 1000
+sde = GS3DE(ns,boundaries, n_labels, friction=4, temp=1e-1, k=1, M=1)
+
+# time integral of the equations of motion
+ts = torch.linspace(0, 5, t_size)
+theta0 = (torch.rand(size=(batch_size, sde.state_size)))
+with torch.no_grad():
+    sde.update_data(u_i, y_i)
+    thetas = torchsde.sdeint(sde, theta0, ts, method='euler') 
+```
 
 ### Development
 

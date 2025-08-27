@@ -180,8 +180,6 @@ class GS3DE(nn.Module):
         self.temp = temp
         self.friction = float(friction) # fric is defined as friction per unit mass
         self.eta_cte = float(np.sqrt(2 * self.friction * temp * kb / self.M))
-        # self.friction = friction
-        # self.eta_cte = np.sqrt(2 * self.friction * temp * kb / self.M)
 
         self.n_labels = n_labels  # used for symbolic variable shapes
 

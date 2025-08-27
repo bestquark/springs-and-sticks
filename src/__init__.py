@@ -1,9 +1,9 @@
 # Springs and Sticks Package
 
-from .entropy import *
-from .model import *
-from .view import *
-from .utils import *
+from . import entropy
+from . import model
+from . import view
+from . import utils
 
 
 __version__ = "0.1.0"
