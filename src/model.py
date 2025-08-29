@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from src.utils import verbose_display
+from .utils import verbose_display
 from itertools import product
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
