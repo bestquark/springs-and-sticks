@@ -47,13 +47,13 @@ def animate_springs(ts, thetas, u_i, y_i, path="anis/animation.gif", frame_skip=
     time_steps = len(ts)
     # frame_skip = max(1, time_steps // 200)  # Adjust frame skip to manage animation length
 
-    ell = max(u_i) - min(u_i)
     solution = np.array(thetas)
 
     # Setting up the figure
     fig, ax = plt.subplots(figsize=(12, 6))
     scatter = ax.scatter(u_i, y_i, label="Data points", marker="x", c="black")
     linspace = np.linspace(min(u_i), max(u_i), 1000)
+    ell = max(u_i) - min(u_i)
 
     time_text = ax.text(
         0.02, 0.95, "", transform=ax.transAxes, fontsize=14, color="black"
@@ -121,7 +121,6 @@ def generalized_animation(ts, thetas, u_i, y_i, path="anis/ganimation.gif", fram
     time_steps = len(ts)
     # frame_skip = max(1, time_steps // 200)  # Adjust frame skip to manage animation length
 
-    ell = max(u_i) - min(u_i)
     solution = np.array(thetas)
 
     n_vars = int(solution.shape[1] // 2)
@@ -131,8 +130,7 @@ def generalized_animation(ts, thetas, u_i, y_i, path="anis/ganimation.gif", fram
     fig, ax = plt.subplots(figsize=(12, 6))
     scatter = ax.scatter(u_i, y_i, label="Data points", marker="o", c="blue", s=10, zorder=10)
     linspace = np.linspace(min(u_i), max(u_i), linspace_points)
-    n_points_seg = linspace_points // (n_vars - 1)
-    seg_length = (max(u_i) - min(u_i)) / (n_vars - 1)
+    x_knots = np.linspace(min(u_i), max(u_i), n_vars)
 
     time_text = ax.text(
         0.02, 0.95, "", transform=ax.transAxes, fontsize=14, color="black"
@@ -143,14 +141,13 @@ def generalized_animation(ts, thetas, u_i, y_i, path="anis/ganimation.gif", fram
     global_y_min = y_i.min()
 
     for frame in range(0, time_steps, frame_skip):
-        y_vals = [solution[frame, i] for i in range(n_vars)]
+        y_vals = solution[frame, :n_vars]
         global_y_max = max(global_y_max, np.max(y_vals))
         global_y_min = min(global_y_min, np.min(y_vals))
 
     ax.set_ylim(global_y_min, global_y_max)
 
     N = len(u_i)  # Number of springs
-    umin = min(u_i)
     spring_lines = [
         mlines.Line2D([], [], color="grey", linestyle="solid") for _ in range(N)
     ]
@@ -166,30 +163,14 @@ def generalized_animation(ts, thetas, u_i, y_i, path="anis/ganimation.gif", fram
         return [scatter, time_text, lines] + spring_lines
 
     def update(frame):
-        sticks = []
-        for i in range(n_vars - 1):
-            st_start = solution[frame * frame_skip, i]
-            st_end = solution[frame * frame_skip, i + 1]
-            x_seg = linspace[n_points_seg * i : n_points_seg * (i + 1)]
-            slope = (st_end - st_start) / seg_length
-            dif = x_seg - umin - i * seg_length
-            stick = st_start + slope * dif
-            sticks.append(stick)
+        frame_idx = frame * frame_skip
+        y_knots = solution[frame_idx, :n_vars]
 
-        sticks = np.array(sticks).flatten()
-        lines.set_data(linspace, np.array(sticks))
+        sticks = np.interp(linspace, x_knots, y_knots)
+        lines.set_data(linspace, sticks)
 
         for i, spring_line in enumerate(spring_lines):
-            interval = int((u_i[i] - umin) // seg_length)
-            if interval == n_vars - 1:
-                interval -= 1
-
-            init_i = solution[frame * frame_skip, interval]
-            final_i = solution[frame * frame_skip, interval + 1]
-
-            slope = (final_i - init_i) / seg_length
-            dif = u_i[i] - umin - interval * seg_length
-            y_val = init_i + slope * dif
+            y_val = np.interp(u_i[i], x_knots, y_knots)
 
             x_spring, y_spring = spring(
                 [u_i[i], y_i[i]], [u_i[i], y_val], nodes=10, width=0.08
@@ -231,56 +212,29 @@ def generalized_single_frame(ts, thetas, u_i, y_i, time_index=0, path="figs/sing
         fig = ax.get_figure()
 
     linspace = np.linspace(min(u_i), max(u_i), linspace_points)
-    n_points_seg = linspace_points // (n_vars - 1)
-    seg_length = (max(u_i) - min(u_i)) / (n_vars - 1)
+    x_knots = np.linspace(min(u_i), max(u_i), n_vars)
 
-    y_vals = [solution[time_index, i] for i in range(n_vars)]
-    global_y_max = max(max(y_vals), max(y_i)) * 1.1
-    global_y_min = min(min(y_vals), min(y_i)) * 1.1
+    y_knots = solution[time_index, :n_vars]
+    global_y_max = max(np.max(y_knots), np.max(y_i)) * 1.1
+    global_y_min = min(np.min(y_knots), np.min(y_i)) * 1.1
 
     ax.set_ylim(global_y_min, global_y_max)
 
-    N = len(u_i)  # Number of springs
-    umin = min(u_i)
-
     # Compute positions and plot
-    sticks = []
-    endpoints = []
-    x_endpoints = []
-    for i in range(n_vars - 1):
-        st_start = solution[time_index, i]
-        st_end = solution[time_index, i + 1]
-        x_seg = linspace[n_points_seg * i : n_points_seg * (i + 1)]
-        slope = (st_end - st_start) / seg_length
-        dif = x_seg - umin - i * seg_length
-        stick = st_start + slope * dif
-        sticks.append(stick)
-        endpoints.append(st_start)
-        x_endpoints.append(umin + i * seg_length)
-        if i == n_vars - 2:
-            endpoints.append(st_end)
-            x_endpoints.append(umin + (i + 1) * seg_length)
+    sticks = np.interp(linspace, x_knots, y_knots)
+    endpoints = y_knots
+    x_endpoints = x_knots
 
     
     for i in range(len(u_i)):
-        interval = int((u_i[i] - umin) // seg_length)
-        if interval == n_vars - 1:
-            interval -= 1
-
-        init_i = solution[time_index, interval]
-        final_i = solution[time_index, interval + 1]
-
-        slope = (final_i - init_i) / seg_length
-        dif = u_i[i] - umin - interval * seg_length
-        y_val = init_i + slope * dif
+        y_val = np.interp(u_i[i], x_knots, y_knots)
 
         x_spring, y_spring = spring(
             [u_i[i], y_i[i]], [u_i[i], y_val], nodes=10, width=0.1
         )
         ax.plot(x_spring, y_spring, c="gray")
 
-    sticks = np.array(sticks).flatten()
-    ax.plot(linspace, np.array(sticks), label="Solution", c="black", linewidth=1.5)
+    ax.plot(linspace, sticks, label="Solution", c="black", linewidth=1.5)
     # add x markers in the endpoints of the sticks
     ax.scatter(x_endpoints, endpoints, c="black", marker="x", s=5)
     ax.scatter(u_i, y_i, label="Data points", marker="o", c="b", s=10, zorder=10)
